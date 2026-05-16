@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>小役カウンター</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+body {
+background-image: url(‘IMG_4695.png’);
+background-size: cover;
+background-position: center;
+background-attachment: fixed;
+display:flex;
+align-items:center;
+justify-content:center;
+min-height:100vh;
+font-family:‘Courier New’,monospace;
+overflow:hidden;
+touch-action:manipulation;
+}
+
+.device {
+background:linear-gradient(145deg,rgba(6,1,12,0.92),rgba(4,1,10,0.94));
+border-radius:24px;
+border:2px solid #c0307a;
+box-shadow:0 0 0 1px #7a1050, inset 0 1px 0 rgba(255,100,180,0.1), 0 20px 60px #000;
+padding:16px 12px;
+width:min(340px,96vw);
+display:flex;
+flex-direction:column;
+gap:6px;
+}
+
+@media (orientation:landscape) and (max-height:500px) {
+body { padding:4px; }
+.device {
+width:100vw;
+max-width:100vw;
+border-radius:0;
+border:none;
+box-shadow:none;
+padding:4px 6px;
+flex-direction:row;
+flex-wrap:wrap;
+gap:4px;
+align-items:flex-start;
+justify-content:center;
+}
+.device-header { width:100%; flex-direction:row; justify-content:space-between; align-items:center; padding:4px 8px; }
+.counter-row { width:calc(50% - 4px); padding:4px 6px; }
+.lcd-display { font-size:26px; }
+.btn-circle { width:28px; height:28px; font-size:16px; }
+.btn-side { display:none; }
+.bottom-controls { width:100%; }
+}
+
+/* ヘッダー */
+.device-header {
+background:linear-gradient(180deg,#3a1060,#250a40);
+border-radius:12px;
+border:1px solid #c0307a;
+box-shadow:none;
+padding:8px 12px;
+display:flex;
+flex-direction:column;
+align-items:center;
+gap:2px;
+}
+
+.total-label {
+font-size:10px;
+color:#ff6eb4;
+letter-spacing:3px;
+font-weight:bold;
+text-shadow:0 0 8px rgba(255,110,180,0.8);
+}
+
+.total-display {
+font-family:‘Courier New’,monospace;
+font-size:36px;
+font-weight:900;
+color:#ff2d78;
+text-shadow:0 0 4px rgba(255,45,120,0.35);
+background:linear-gradient(180deg,#1e0838,#160526);
+padding:4px 16px;
+border-radius:6px;
+border:1px solid #c0307a;
+box-shadow:inset 0 0 12px rgba(192,48,122,0.4), 0 0 8px rgba(192,48,122,0.3);
+letter-spacing:4px;
+min-width:160px;
+text-align:center;
+cursor:pointer;
+}
+
+/* カウンター行 */
+.counter-row {
+border-radius:12px;
+border:1px solid;
+padding:6px 10px;
+display:flex;
+align-items:center;
+gap:8px;
+position:relative;
+overflow:hidden;
+}
+
+.counter-row::after {
+content:’’;
+position:absolute;
+top:0; left:0; right:0;
+height:1px;
+opacity:0.5;
+}
+
+/* 各行の色 */
+.row-a {
+background:linear-gradient(135deg,rgba(255,45,120,0.02),rgba(6,1,14,0.97));
+border-color:#ff2d78;
+box-shadow:none;
+}
+.row-a::after { background:linear-gradient(90deg,transparent,#ff2d78,transparent); }
+
+.row-b {
+background:linear-gradient(135deg,rgba(255,100,20,0.02),rgba(6,1,14,0.97));
+border-color:#ff6414;
+box-shadow:none;
+}
+.row-b::after { background:linear-gradient(90deg,transparent,#ff6414,transparent); }
+
+.row-c {
+background:linear-gradient(135deg,rgba(255,160,0,0.02),rgba(6,1,14,0.97));
+border-color:#ffa000;
+box-shadow:none;
+}
+.row-c::after { background:linear-gradient(90deg,transparent,#ffa000,transparent); }
+
+.row-d {
+background:linear-gradient(135deg,rgba(180,60,255,0.02),rgba(6,1,14,0.97));
+border-color:#b43cff;
+box-shadow:none;
+}
+.row-d::after { background:linear-gradient(90deg,transparent,#b43cff,transparent); }
+
+.row-e {
+background:linear-gradient(135deg,rgba(60,160,255,0.02),rgba(6,1,14,0.97));
+border-color:#3ca0ff;
+box-shadow:none;
+}
+.row-e::after { background:linear-gradient(90deg,transparent,#3ca0ff,transparent); }
+
+/* モードラベル */
+.mode-label {
+writing-mode:vertical-rl;
+text-orientation:mixed;
+transform:rotate(180deg);
+font-size:9px;
+font-weight:bold;
+letter-spacing:1px;
+min-height:48px;
+display:flex;
+align-items:center;
+justify-content:center;
+flex-shrink:0;
+cursor:pointer;
+border-radius:4px;
+padding:6px 4px;
+border:1px solid;
+transition:box-shadow 0.15s;
+user-select:none;
+}
+.mode-label:active { filter:brightness(1.3); }
+
+.row-a .mode-label { color:#ff2d78; border-color:#ff2d78; background:rgba(255,45,120,0.04); text-shadow:0 0 6px rgba(255,45,120,0.8); }
+.row-b .mode-label { color:#ff6414; border-color:#ff6414; background:rgba(255,100,20,0.04); text-shadow:0 0 6px rgba(255,100,20,0.8); }
+.row-c .mode-label { color:#ffa000; border-color:#ffa000; background:rgba(255,160,0,0.04); text-shadow:0 0 6px rgba(255,160,0,0.8); }
+.row-d .mode-label { color:#b43cff; border-color:#b43cff; background:rgba(180,60,255,0.04); text-shadow:0 0 6px rgba(180,60,255,0.8); }
+.row-e .mode-label { color:#3ca0ff; border-color:#3ca0ff; background:rgba(60,160,255,0.04); text-shadow:0 0 6px rgba(60,160,255,0.8); }
+
+/* LCD エリア */
+.lcd-area {
+flex:1;
+background:rgba(0,0,0,0.04);
+border-radius:6px;
+border:1px solid;
+padding:4px 8px;
+display:flex;
+flex-direction:column;
+align-items:flex-end;
+box-shadow:inset 0 2px 8px rgba(0,0,0,0.2);
+min-width:100px;
+cursor:pointer;
+user-select:none;
+}
+
+.row-a .lcd-area { border-color:#ff2d78; box-shadow:inset 0 2px 4px rgba(0,0,0,0.2); }
+.row-b .lcd-area { border-color:#ff6414; box-shadow:inset 0 2px 4px rgba(0,0,0,0.2); }
+.row-c .lcd-area { border-color:#ffa000; box-shadow:inset 0 2px 4px rgba(0,0,0,0.2); }
+.row-d .lcd-area { border-color:#b43cff; box-shadow:inset 0 2px 4px rgba(0,0,0,0.2); }
+.row-e .lcd-area { border-color:#3ca0ff; box-shadow:inset 0 2px 4px rgba(0,0,0,0.2); }
+
+.lcd-display {
+font-family:‘Courier New’,monospace;
+font-size:36px;
+font-weight:900;
+letter-spacing:2px;
+line-height:1;
+min-width:80px;
+text-align:right;
+}
+
+.row-a .lcd-display { color:#ff2d78; text-shadow:0 0 4px rgba(255,45,120,0.35); }
+.row-b .lcd-display { color:#ff6414; text-shadow:0 0 4px rgba(255,100,20,0.35); }
+.row-c .lcd-display { color:#ffa000; text-shadow:0 0 4px rgba(255,160,0,0.35); }
+.row-d .lcd-display { color:#b43cff; text-shadow:0 0 4px rgba(180,60,255,0.35); }
+.row-e .lcd-display { color:#3ca0ff; text-shadow:0 0 4px rgba(60,160,255,0.35); }
+
+.prob-text {
+font-size:9px;
+letter-spacing:0.5px;
+font-family:‘Courier New’,monospace;
+opacity:0.7;
+}
+.row-a .prob-text { color:#ff2d78; }
+.row-b .prob-text { color:#ff6414; }
+.row-c .prob-text { color:#ffa000; }
+.row-d .prob-text { color:#b43cff; }
+.row-e .prob-text { color:#3ca0ff; }
+
+/* ＋ − ボタン */
+.btn-group {
+display:flex;
+flex-direction:column;
+gap:5px;
+flex-shrink:0;
+}
+
+.btn-circle {
+width:36px;
+height:36px;
+border-radius:50%;
+border:2px solid;
+display:flex;
+align-items:center;
+justify-content:center;
+font-size:20px;
+font-weight:bold;
+cursor:pointer;
+background:rgba(0,0,0,0.4);
+transition:transform 0.08s, box-shadow 0.08s;
+touch-action:manipulation;
+user-select:none;
+flex-shrink:0;
+}
+.btn-circle:active { transform:scale(0.9); }
+
+.row-a .btn-circle { color:#ff2d78; border-color:#ff2d78; box-shadow:none; }
+.row-b .btn-circle { color:#ff6414; border-color:#ff6414; box-shadow:none; }
+.row-c .btn-circle { color:#ffa000; border-color:#ffa000; box-shadow:none; }
+.row-d .btn-circle { color:#b43cff; border-color:#b43cff; box-shadow:none; }
+.row-e .btn-circle { color:#3ca0ff; border-color:#3ca0ff; box-shadow:none; }
+
+/* ボール */
+.ball-btn {
+width:38px;
+height:38px;
+border-radius:50%;
+border:none;
+cursor:pointer;
+transition:transform 0.08s;
+touch-action:manipulation;
+flex-shrink:0;
+}
+.ball-btn:active { transform:scale(0.9); }
+
+.ball-a { background:radial-gradient(circle at 35% 30%,#ff80b0,#c0206a); box-shadow:none; }
+.ball-b { background:radial-gradient(circle at 35% 30%,#ff9060,#d04000); box-shadow:none; }
+.ball-c { background:radial-gradient(circle at 35% 30%,#ffd060,#c07800); box-shadow:none; }
+.ball-d { background:radial-gradient(circle at 35% 30%,#d080ff,#8020cc); box-shadow:none; }
+.ball-e { background:radial-gradient(circle at 35% 30%,#60c0ff,#1060cc); box-shadow:none; }
+
+/* 下部 */
+.btn-side {
+width:32px; height:32px;
+border-radius:50%;
+border:1px solid #c0307a;
+background:rgba(192,48,122,0.15);
+color:#ff6eb4;
+font-size:13px;
+cursor:pointer;
+display:flex;
+align-items:center;
+justify-content:center;
+box-shadow:0 0 8px rgba(192,48,122,0.4);
+transition:transform 0.08s;
+touch-action:manipulation;
+flex-shrink:0;
+}
+.btn-side:active { transform:scale(0.9); }
+
+.bottom-controls {
+display:flex;
+align-items:center;
+justify-content:space-between;
+padding:4px 8px;
+}
+
+.btn-game {
+background:linear-gradient(180deg,rgba(255,45,120,0.3),rgba(192,48,122,0.2));
+border:2px solid #c0307a;
+border-radius:8px;
+color:#ff6eb4;
+font-size:11px;
+font-weight:bold;
+letter-spacing:2px;
+padding:8px 20px;
+cursor:pointer;
+box-shadow:0 0 12px rgba(192,48,122,0.5), inset 0 1px 0 rgba(255,100,180,0.2);
+transition:transform 0.08s;
+touch-action:manipulation;
+text-shadow:0 0 6px rgba(255,110,180,0.8);
+}
+.btn-game:active { transform:scale(0.95); }
+
+/* フラッシュ */
+@keyframes flashA { 0%{background:rgba(0,0,0,0.04)} 30%{background:rgba(255,45,120,0.25)} 100%{background:rgba(0,0,0,0.04)} }
+@keyframes flashB { 0%{background:rgba(0,0,0,0.04)} 30%{background:rgba(255,100,20,0.25)} 100%{background:rgba(0,0,0,0.04)} }
+@keyframes flashC { 0%{background:rgba(0,0,0,0.04)} 30%{background:rgba(255,160,0,0.25)} 100%{background:rgba(0,0,0,0.04)} }
+@keyframes flashD { 0%{background:rgba(0,0,0,0.04)} 30%{background:rgba(180,60,255,0.25)} 100%{background:rgba(0,0,0,0.04)} }
+@keyframes flashE { 0%{background:rgba(0,0,0,0.04)} 30%{background:rgba(60,160,255,0.25)} 100%{background:rgba(0,0,0,0.04)} }
+
+.flash-a { animation:flashA 0.25s ease; }
+.flash-b { animation:flashB 0.25s ease; }
+.flash-c { animation:flashC 0.25s ease; }
+.flash-d { animation:flashD 0.25s ease; }
+.flash-e { animation:flashE 0.25s ease; }
+
+/* オーバーレイ */
+.overlay {
+display:none;
+position:fixed;
+inset:0;
+background:rgba(10,2,30,0.92);
+align-items:center;
+justify-content:center;
+z-index:200;
+}
+.overlay-box {
+background:linear-gradient(145deg,#2a1040,#1a0828);
+border:1px solid #c0307a;
+border-radius:16px;
+box-shadow:0 0 30px rgba(192,48,122,0.5);
+padding:20px 24px;
+text-align:center;
+color:#ccc;
+width:min(300px,90vw);
+}
+.overlay-title { font-size:12px; letter-spacing:2px; color:#ff6eb4; margin-bottom:12px; text-shadow:0 0 8px rgba(255,110,180,0.8); }
+.overlay-input {
+width:100%;
+background:#0e0420;
+border:1px solid #c0307a;
+border-radius:8px;
+color:#ff6eb4;
+font-family:‘Courier New’,monospace;
+font-weight:bold;
+padding:8px 12px;
+outline:none;
+box-shadow:inset 0 0 12px rgba(192,48,122,0.3);
+}
+.overlay-btns { display:flex; gap:12px; margin-top:16px; }
+.btn-ok {
+flex:1; background:linear-gradient(180deg,rgba(255,45,120,0.4),rgba(192,48,122,0.3));
+border:1px solid #c0307a; border-radius:8px;
+color:#ff6eb4; padding:10px; font-size:13px; font-weight:bold; cursor:pointer;
+box-shadow:0 0 10px rgba(192,48,122,0.4);
+}
+.btn-cancel {
+flex:1; background:rgba(255,255,255,0.05); border:1px solid #444; border-radius:8px;
+color:#888; padding:10px; font-size:13px; cursor:pointer;
+}
+</style>
+
+</head>
+<body>
+
+<div class="device">
+  <div class="device-header">
+    <div class="total-label">総ゲーム数 <span style="font-size:8px;opacity:0.7;">（タップで入力）</span></div>
+    <div class="total-display" id="totalDisplay" onclick="openTotal()">0</div>
+  </div>
+
+  <!-- A -->
+
+  <div class="counter-row row-a">
+    <div class="btn-group">
+      <button class="btn-circle" onclick="increment('a')">＋</button>
+      <button class="btn-circle" onclick="decrement('a')">－</button>
+    </div>
+    <div class="mode-label" onclick="editLabel('a')"><span id="label-a">MODE A</span></div>
+    <div class="lcd-area" id="lcd-a" onclick="increment('a')">
+      <div class="lcd-display" id="count-a">0</div>
+      <div class="prob-text" id="prob-a">1/—</div>
+    </div>
+    <button class="ball-btn ball-a" onclick="increment('a')"></button>
+  </div>
+
+  <!-- B -->
+
+  <div class="counter-row row-b">
+    <div class="btn-group">
+      <button class="btn-circle" onclick="increment('b')">＋</button>
+      <button class="btn-circle" onclick="decrement('b')">－</button>
+    </div>
+    <div class="mode-label" onclick="editLabel('b')"><span id="label-b">MODE B</span></div>
+    <div class="lcd-area" id="lcd-b" onclick="increment('b')">
+      <div class="lcd-display" id="count-b">0</div>
+      <div class="prob-text" id="prob-b">1/—</div>
+    </div>
+    <button class="ball-btn ball-b" onclick="increment('b')"></button>
+  </div>
+
+  <!-- C -->
+
+  <div class="counter-row row-c">
+    <div class="btn-group">
+      <button class="btn-circle" onclick="increment('c')">＋</button>
+      <button class="btn-circle" onclick="decrement('c')">－</button>
+    </div>
+    <div class="mode-label" onclick="editLabel('c')"><span id="label-c">MODE C</span></div>
+    <div class="lcd-area" id="lcd-c" onclick="increment('c')">
+      <div class="lcd-display" id="count-c">0</div>
+      <div class="prob-text" id="prob-c">1/—</div>
+    </div>
+    <button class="ball-btn ball-c" onclick="increment('c')"></button>
+  </div>
+
+  <!-- D -->
+
+  <div class="counter-row row-d">
+    <div class="btn-group">
+      <button class="btn-circle" onclick="increment('d')">＋</button>
+      <button class="btn-circle" onclick="decrement('d')">－</button>
+    </div>
+    <div class="mode-label" onclick="editLabel('d')"><span id="label-d">MODE D</span></div>
+    <div class="lcd-area" id="lcd-d" onclick="increment('d')">
+      <div class="lcd-display" id="count-d">0</div>
+      <div class="prob-text" id="prob-d">1/—</div>
+    </div>
+    <button class="ball-btn ball-d" onclick="increment('d')"></button>
+  </div>
+
+  <!-- E -->
+
+  <div class="counter-row row-e">
+    <div class="btn-group">
+      <button class="btn-circle" onclick="increment('e')">＋</button>
+      <button class="btn-circle" onclick="decrement('e')">－</button>
+    </div>
+    <div class="mode-label" onclick="editLabel('e')"><span id="label-e">MODE E</span></div>
+    <div class="lcd-area" id="lcd-e" onclick="increment('e')">
+      <div class="lcd-display" id="count-e">0</div>
+      <div class="prob-text" id="prob-e">1/—</div>
+    </div>
+    <button class="ball-btn ball-e" onclick="increment('e')"></button>
+  </div>
+
+  <div class="bottom-controls">
+    <button class="btn-side" onclick="showReset()">🗑</button>
+    <button class="btn-game" onclick="incrementTotal()">GAME ＋</button>
+  </div>
+</div>
+
+<!-- 総ゲーム数入力 -->
+
+<div class="overlay" id="totalOverlay">
+  <div class="overlay-box">
+    <div class="overlay-title">総ゲーム数を入力</div>
+    <input class="overlay-input" id="totalInput" type="number" inputmode="numeric" placeholder="0"
+      style="font-size:32px;text-align:right;letter-spacing:3px;" />
+    <div class="overlay-btns">
+      <button class="btn-ok" onclick="applyTotal()">セット</button>
+      <button class="btn-cancel" onclick="closeTotal()">キャンセル</button>
+    </div>
+  </div>
+</div>
+
+<!-- ラベル編集 -->
+
+<div class="overlay" id="labelOverlay">
+  <div class="overlay-box">
+    <div class="overlay-title">ラベルを編集</div>
+    <input class="overlay-input" id="labelInput" type="text" maxlength="8"
+      style="font-size:20px;text-align:center;letter-spacing:2px;" />
+    <div class="overlay-btns">
+      <button class="btn-ok" onclick="applyLabel()">セット</button>
+      <button class="btn-cancel" onclick="closeLabel()">キャンセル</button>
+    </div>
+  </div>
+</div>
+
+<!-- リセット確認 -->
+
+<div class="overlay" id="resetOverlay">
+  <div class="overlay-box">
+    <div class="overlay-title" style="color:#ff2d78;">全リセット</div>
+    <div style="font-size:13px;margin-bottom:4px;color:#aaa;">すべてのカウントをリセットしますか？</div>
+    <div class="overlay-btns">
+      <button class="btn-ok" style="border-color:#ff2d78;color:#ff2d78;" onclick="resetAll()">リセット</button>
+      <button class="btn-cancel" onclick="closeReset()">キャンセル</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var KEYS = ['a','b','c','d','e'];
+var state = { a:0, b:0, c:0, d:0, e:0, total:0 };
+var labels = { a:'MODE A', b:'MODE B', c:'MODE C', d:'MODE D', e:'MODE E' };
+var editingKey = null;
+
+function updateDisplay(key) {
+  document.getElementById('count-' + key).textContent = state[key];
+  var prob = document.getElementById('prob-' + key);
+  prob.textContent = (state.total > 0 && state[key] > 0)
+    ? '1/' + Math.round(state.total / state[key]) : '1/—';
+  var lcd = document.getElementById('lcd-' + key);
+  lcd.classList.remove('flash-a','flash-b','flash-c','flash-d','flash-e');
+  void lcd.offsetWidth;
+  lcd.classList.add('flash-' + key);
+}
+
+function updateTotal() {
+  document.getElementById('totalDisplay').textContent = state.total;
+  KEYS.forEach(function(k) { updateDisplay(k); });
+}
+
+function increment(key) { state[key]++; updateDisplay(key); vibrate(); }
+function decrement(key) { if (state[key] > 0) { state[key]--; updateDisplay(key); } vibrate(); }
+function incrementTotal() { state.total++; updateTotal(); vibrate(); }
+function vibrate() { if (navigator.vibrate) navigator.vibrate(20); }
+
+function openTotal() {
+  document.getElementById('totalInput').value = state.total || '';
+  document.getElementById('totalOverlay').style.display = 'flex';
+  setTimeout(function() { document.getElementById('totalInput').focus(); }, 50);
+}
+function closeTotal() { document.getElementById('totalOverlay').style.display = 'none'; }
+function applyTotal() {
+  var v = parseInt(document.getElementById('totalInput').value, 10);
+  if (!isNaN(v) && v >= 0) { state.total = v; updateTotal(); }
+  closeTotal();
+}
+
+function editLabel(key) {
+  editingKey = key;
+  var input = document.getElementById('labelInput');
+  input.value = labels[key];
+  document.getElementById('labelOverlay').style.display = 'flex';
+  setTimeout(function() { input.focus(); input.select(); }, 50);
+}
+function closeLabel() { document.getElementById('labelOverlay').style.display = 'none'; editingKey = null; }
+function applyLabel() {
+  var v = document.getElementById('labelInput').value.trim();
+  if (v && editingKey) {
+    labels[editingKey] = v;
+    document.getElementById('label-' + editingKey).textContent = v;
+  }
+  closeLabel();
+}
+
+function showReset() { document.getElementById('resetOverlay').style.display = 'flex'; }
+function closeReset() { document.getElementById('resetOverlay').style.display = 'none'; }
+function resetAll() {
+  KEYS.forEach(function(k) { state[k] = 0; });
+  state.total = 0;
+  updateTotal();
+  closeReset();
+}
+
+document.getElementById('totalInput').addEventListener('keydown', function(e) { if (e.key === 'Enter') applyTotal(); });
+document.getElementById('labelInput').addEventListener('keydown', function(e) { if (e.key === 'Enter') applyLabel(); });
+
+KEYS.forEach(function(key) {
+  var timer;
+  var lcd = document.getElementById('lcd-' + key);
+  lcd.addEventListener('touchstart', function() {
+    timer = setTimeout(function() { state[key] = 0; updateDisplay(key); }, 800);
+  });
+  lcd.addEventListener('touchend', function() { clearTimeout(timer); });
+});
+</script>
+
+</body>
+</html>
